@@ -81,8 +81,8 @@ func CreateNewGame(w http.ResponseWriter, r *http.Request) {
 
 	type GameRequest struct {
 		Players []string `json:"players" validate:"required,len=2"`
-		Columns int      `json:"columns" validate:"required,eq=3"`
-		Rows    int      `json:"rows" validate:"required,eq=3"`
+		Columns *int     `json:"columns" validate:"required,eq=3"`
+		Rows    *int     `json:"rows" validate:"required,eq=3"`
 	}
 
 	v := validator.New()
@@ -110,9 +110,9 @@ func CreateNewGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newBoard := [][]int{}
-	for i := 0; i < gameRequest.Rows; i++ {
+	for i := 0; i < *gameRequest.Rows; i++ {
 		row := []int{}
-		for j := 0; j < gameRequest.Columns; j++ {
+		for j := 0; j < *gameRequest.Columns; j++ {
 			row = append(row, -1)
 		}
 		newBoard = append(newBoard, row)
@@ -121,8 +121,8 @@ func CreateNewGame(w http.ResponseWriter, r *http.Request) {
 	game := database.Game{
 		ID:            uuid.NewV4().String(),
 		Players:       map[int]string{0: gameRequest.Players[0], 1: gameRequest.Players[1]},
-		Columns:       gameRequest.Columns,
-		Rows:          gameRequest.Rows,
+		Columns:       *gameRequest.Columns,
+		Rows:          *gameRequest.Rows,
 		State:         database.StateInProgress,
 		Moves:         []database.Move{},
 		Winner:        nil,
@@ -179,10 +179,7 @@ func RetrieveGameState(w http.ResponseWriter, r *http.Request) {
 	game, err := dbClient.GetGameWithID(gameID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
-		fmt.Println("in here!")
 		*response.ErrorMessage = err.Error()
-		fmt.Println("error: ", *response.ErrorMessage)
-		json.NewEncoder(w).Encode(&response)
 		return
 	}
 

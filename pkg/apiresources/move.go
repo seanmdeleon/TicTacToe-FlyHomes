@@ -223,8 +223,8 @@ func PostAMove(w http.ResponseWriter, r *http.Request) {
 	defer json.NewEncoder(w).Encode(&response)
 
 	type MoveRequest struct {
-		Column int `json:"column" validate:"required,lte=2,gte=0"`
-		Row    int `json:"row" validate:"required,lte=2,gte=0"`
+		Column *int `json:"column" validate:"required,lte=2,gte=0"`
+		Row    *int `json:"row" validate:"required,lte=2,gte=0"`
 	}
 
 	v := validator.New()
@@ -267,9 +267,9 @@ func PostAMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game, err := dbClient.GetGameWithID(gameID)
-	if err != nil {
+	if err != nil || game.State == database.StateComplete || game.State == database.StateQuit {
 		fmt.Printf("Failed to find game with gameID %s. Err: %s\n", gameID, err.Error())
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Failed to find an IN_PROGRESS game with this gameID. %s", err.Error()), http.StatusNotFound)
 		*response.ErrorMessage = err.Error()
 		return
 	}
@@ -297,7 +297,7 @@ func PostAMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moveNumber, err := playMove(moveRequest.Row, moveRequest.Column, playerID, &game)
+	moveNumber, err := playMove(*moveRequest.Row, *moveRequest.Column, playerID, &game)
 	if err != nil {
 		e := fmt.Errorf("Failed to play the move, it is illegal. %s\n", err.Error())
 		http.Error(w, e.Error(), http.StatusBadRequest)
@@ -310,17 +310,30 @@ func PostAMove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store next player
-	if game.NextPlayerIdx == 0 {
+	if game.NextPlayerIdx == -1 {
+		if playerID == 0 {
+			game.NextPlayerIdx = 1
+		} else {
+			game.NextPlayerIdx = 0
+		}
+	} else if game.NextPlayerIdx == 0 {
 		game.NextPlayerIdx = 1
 	} else {
 		game.NextPlayerIdx = 0
 	}
 
 	// check the board for a winner and store the winner in the response
-	if checkBoardForWinner(moveRequest.Row, moveRequest.Column, playerID, &game) {
+	if checkBoardForWinner(*moveRequest.Row, *moveRequest.Column, playerID, &game) {
 		fmt.Printf("Winner! player: %s\n", game.Players[playerID])
 		game.State = database.StateComplete
 		response.Data["winner"] = game.Players[playerID]
+	} else {
+		// There is no winner, if the number of moves = 9, then we know we have a DRAW and there is no winner
+		// NOTE this is for a strict 3x3 board only. The real check would be against game.Rows*game.Columns
+		if len(game.Moves) == 9 {
+			// winner remains null
+			game.State = database.StateComplete
+		}
 	}
 
 	// Update the move in the DB
