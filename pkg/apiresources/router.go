@@ -8,7 +8,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var dbClient *database.Client
+// make this package variable an interface to enable mocked testing
+var dbClient database.DB
 
 // GetRouter builds the main router with the tictactoe subrouter
 func GetRouter() *mux.Router {

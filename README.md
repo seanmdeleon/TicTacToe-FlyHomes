@@ -3,10 +3,29 @@ TicTacToe coding challenge for FlyHomes interview
 
 --> To Start the localhost HTTP server <--
 
-    In a terminal window, naviate to the /main folder and run './main' for the compiled executable. The HTTP server will turn on and remain idle until closed
+    This is a Go program.
+
+    In a terminal window, naviate to the /main folder and run './main' for the compiled executable. If the terminal denies you permission, be sure to 'chmod u+x main' to enable this file for execution. The HTTP server will turn on and remain idle until closed
     via CTRL+C
     Keep this terminal open and the main program running while utilizing the API for game play
-    If you wish to compile on your own, run 'go build' in this folder to recompile the main executable
+    
+    If you wish to compile on your own:
+
+        * Navigate to SeanDeLeon/main directory
+        * Run: go build
+        * Find the new 'main' executable and run it
+    
+    If you wish to build the entire SeanDeLeon/ directory
+
+        * Navigate to the top level SeanDeLeon/ directory
+        * Run: go build ./...
+    
+    If you wish to re-initialize the go.mod file for fun
+
+        * Navigate to the top level SeanDeLeon/ directory
+        * Delete both the go.mod and go.sum file
+        * Run: go mod init github.com/TicTacToe-Backend/SeanDeLeon
+        * Run: go build ./...
 
 --> To Play a game <--
 

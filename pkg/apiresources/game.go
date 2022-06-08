@@ -179,7 +179,10 @@ func RetrieveGameState(w http.ResponseWriter, r *http.Request) {
 	game, err := dbClient.GetGameWithID(gameID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
+		fmt.Println("in here!")
 		*response.ErrorMessage = err.Error()
+		fmt.Println("error: ", *response.ErrorMessage)
+		json.NewEncoder(w).Encode(&response)
 		return
 	}
 
