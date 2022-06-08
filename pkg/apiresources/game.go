@@ -6,10 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/database"
-	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/validator"
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/database"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/validator"
 )
 
 /*

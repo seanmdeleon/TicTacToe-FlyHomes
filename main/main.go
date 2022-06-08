@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"strconv"
 
-	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/apiresources"
 	"github.com/rs/cors"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/apiresources"
 )
 
 // This is the entry point for the HTTP server

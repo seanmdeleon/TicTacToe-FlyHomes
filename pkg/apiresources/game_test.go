@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/TicTacToe-Backend/SeanDeLeon/mocks"
-	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/database"
 	"github.com/gorilla/mux"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/mocks"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/database"
 	"github.com/stretchr/testify/assert"
 )
 

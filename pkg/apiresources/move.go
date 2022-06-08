@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/database"
-	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/validator"
 	"github.com/gorilla/mux"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/database"
+	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/validator"
 )
 
 /*
