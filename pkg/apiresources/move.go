@@ -7,14 +7,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/database"
+	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/validator"
 	"github.com/gorilla/mux"
-	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/database"
 )
 
 /*
 	RetrieveListOfMoves the list or sublist of moves from a given game_id
 	Optional query arguments to retrieve only a a sublist
-	If the optionally provided 'start' is out of range, return a 404
+	If the optionally provided 'start' is out of range, default to 0
 	If the optionally provided 'until' is out of range, simply return start -> last of all moves
 	'start' defaults to 0 and 'until' defaults to (the total number of moves - 1)
 
@@ -23,7 +24,10 @@ import (
 
 	Example Response
 		{
-  			"moves": [{"type": "MOVE", "player": "player1", "row":1, "column":1 }, {"type": "QUIT", "player": "player2"}]
+			"error": null,
+			"data": {
+  				"moves": [{"type": "MOVE", "player": "player1", "row":1, "column":1 }, {"type": "QUIT", "player": "player2"}]
+			}
 		}
 
 	StatusCodes
@@ -34,18 +38,22 @@ import (
 */
 func RetrieveListOfMoves(w http.ResponseWriter, r *http.Request) {
 
+	response := Response{ErrorMessage: new(string)}
+	defer json.NewEncoder(w).Encode(&response)
+
 	vars := mux.Vars(r)
 	gameID, ok := vars["game_id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("No gameID provided")
+		http.Error(w, "game_id not provided", http.StatusBadRequest)
+		*response.ErrorMessage = "game_id not provided"
 		return
 	}
 
 	game, err := dbClient.GetGameWithID(gameID)
 	if err != nil {
 		fmt.Printf("Failed to find game with gameID %s. Err: %s\n", gameID, err.Error())
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
+		*response.ErrorMessage = err.Error()
 		return
 	}
 
@@ -57,57 +65,56 @@ func RetrieveListOfMoves(w http.ResponseWriter, r *http.Request) {
 	startStr := r.URL.Query().Get("start")
 	untilStr := r.URL.Query().Get("until")
 
-	// check if startStr exists and if it's actually an integer
+	// check if startStr exists
 	if len(startStr) > 0 {
-		start, err = strconv.Atoi(startStr)
-		if err != nil {
-			// append error
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+		// no need to error check, if it's wrong then just default to 0
+		start, _ = strconv.Atoi(startStr)
 	}
 
-	// check if untilStr exists and if it's actually an integer
+	// check if untilStr exists
 	if len(untilStr) > 0 {
-		until, err = strconv.Atoi(untilStr)
-		if err != nil {
-			// append error
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
+		until, _ = strconv.Atoi(untilStr)
 		// take the lowest most valid until value quietly
 		if until >= len(game.Moves) {
 			until = len(game.Moves) - 1
 		}
 	}
 
-	ok, err = validateStartAndUntilValues(start, until, len(game.Moves))
+	ok, errMsgs := validateStartAndUntilValues(start, until, len(game.Moves))
 	if !ok {
-		fmt.Printf("Err: %s\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("Error: %s\n", errMsgs)
+		http.Error(w, errMsgs, http.StatusBadRequest)
+		*response.ErrorMessage = errMsgs
 		return
 	}
 
-	response := map[string][]database.Move{
+	response.Data = map[string]interface{}{
 		"moves": game.Moves[start : until+1],
 	}
+	response.ErrorMessage = nil
 
-	json.NewEncoder(w).Encode(&response)
 	w.WriteHeader(http.StatusOK)
 }
 
-func validateStartAndUntilValues(start, until, totalNumMoves int) (bool, error) {
+func validateStartAndUntilValues(start, until, totalNumMoves int) (bool, string) {
+
+	valid := true
+	errMsgs := ""
+	if totalNumMoves == 0 {
+		return false, fmt.Sprintf("There are no moves for this game")
+	}
 
 	if start > until {
-		return false, fmt.Errorf("start must be <= until")
+		valid = false
+		errMsgs += fmt.Sprintf("'start' must be less than or equal to  'until'. ")
 	}
 
 	if start >= totalNumMoves {
-		return false, fmt.Errorf("This game has a total of %d moves, so start must be < %d", totalNumMoves, totalNumMoves)
+		valid = false
+		errMsgs += fmt.Sprintf("This game has a total of %d moves, so start must be less than %d.", totalNumMoves, totalNumMoves)
 	}
 
-	return true, nil
+	return valid, errMsgs
 }
 
 /*
@@ -116,10 +123,13 @@ func validateStartAndUntilValues(start, until, totalNumMoves int) (bool, error) 
 
 	Example Response
 		{
-			"type" : "MOVE",
-			"player": "1", # number corresponding to the player
-			"row": "1",
-			"column": 2
+			"error": null,
+			"data" : {
+				"type" : "MOVE",
+				"player": "1", # number corresponding to the player
+				"row": "1",
+				"column": 2
+			}
 		}
 
 	StatusCodes
@@ -130,45 +140,52 @@ func validateStartAndUntilValues(start, until, totalNumMoves int) (bool, error) 
 */
 func RetrieveAMove(w http.ResponseWriter, r *http.Request) {
 
+	response := Response{ErrorMessage: new(string)}
+	defer json.NewEncoder(w).Encode(&response)
+
 	// Retrieve game_id and move_number and validate them
 	vars := mux.Vars(r)
 	gameID, ok := vars["game_id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("No game_id provided")
+		http.Error(w, "game_id not provided", http.StatusBadRequest)
+		*response.ErrorMessage = "game_id not provided"
 		return
 	}
 
 	moveNumberStr, ok := vars["move_number"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("No move_number provided")
+		http.Error(w, "move_number not provided", http.StatusBadRequest)
+		*response.ErrorMessage = "move_number not provided"
 		return
 	}
+
 	moveNumber, err := strconv.Atoi(moveNumberStr)
 	if err != nil {
-		fmt.Printf("move_number must be an integer")
-		// append error
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "move_number must be an integer", http.StatusBadRequest)
+		*response.ErrorMessage = "move_number must be an integer"
 		return
 	}
 
 	game, err := dbClient.GetGameWithID(gameID)
 	if err != nil {
 		fmt.Printf("Failed to find game with gameID %s. Err: %s\n", gameID, err.Error())
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
+		*response.ErrorMessage = err.Error()
 		return
 	}
 
 	// move_number must be within range, and is 0 offset
 	if moveNumber >= len(game.Moves) {
-		fmt.Printf("move_number %d is out of range\n", moveNumber)
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("move_number %d is out of range\n", moveNumber), http.StatusBadRequest)
+		*response.ErrorMessage = fmt.Sprintf("move_number %d is out of range\n", moveNumber)
 		return
 	}
 
-	response := game.Moves[moveNumber]
-	json.NewEncoder(w).Encode(&response)
+	response.Data = map[string]interface{}{
+		"move": game.Moves[moveNumber],
+	}
+	response.ErrorMessage = nil
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -186,8 +203,11 @@ func RetrieveAMove(w http.ResponseWriter, r *http.Request) {
 
 	Example Response
 		{
-			"move": "{gameId}/moves/{move_number}"
-			"winner": "player1" // omitempty
+			"error": null,
+			"data" : {
+				"move": "{gameId}/moves/{move_number}"
+				"winner": "player1" // omitempty
+			}
 		}
 
 	StatusCodes
@@ -199,79 +219,95 @@ func RetrieveAMove(w http.ResponseWriter, r *http.Request) {
 */
 func PostAMove(w http.ResponseWriter, r *http.Request) {
 
+	response := Response{ErrorMessage: new(string)}
+	defer json.NewEncoder(w).Encode(&response)
+
 	type MoveRequest struct {
-		Column int `json:"column" validate:"required"`
-		Row    int `json:"row" validate:"required"`
+		Column int `json:"column" validate:"required,lte=2,gte=0"`
+		Row    int `json:"row" validate:"required,lte=2,gte=0"`
 	}
+
+	v := validator.New()
 
 	requestBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		*response.ErrorMessage = err.Error()
 		return
 	}
 
 	moveRequest := MoveRequest{}
 	err = json.Unmarshal(requestBody, &moveRequest)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		*response.ErrorMessage = fmt.Sprintf("Failed to unmarshal data, moveRequest is malformed. %s", err.Error())
 		return
 	}
 
-	// validate!!! but only for user input
-
-	// Retrieve game_id and move_number and validate them
+	// Retrieve game_id and player_id and validate them
 	vars := mux.Vars(r)
 	gameID, ok := vars["game_id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("No game_id provided")
+		http.Error(w, "game_id not provided", http.StatusBadRequest)
+		*response.ErrorMessage = "game_id not provided"
 		return
 	}
 
 	playerIDStr, ok := vars["player_id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("No player_id provided")
+		http.Error(w, "player_id not provided", http.StatusBadRequest)
+		*response.ErrorMessage = "player_id not provided"
 		return
 	}
 	playerID, err := strconv.Atoi(playerIDStr)
 	if err != nil {
-		fmt.Printf("player_id must be an integer")
-		// append error
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "player_id must be an integer", http.StatusBadRequest)
+		*response.ErrorMessage = "player_id must be an integer"
 		return
 	}
 
 	game, err := dbClient.GetGameWithID(gameID)
 	if err != nil {
 		fmt.Printf("Failed to find game with gameID %s. Err: %s\n", gameID, err.Error())
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
+		*response.ErrorMessage = err.Error()
 		return
 	}
 
 	// Player not found
 	if _, ok := game.Players[playerID]; !ok {
-		fmt.Printf("Player with playerID %d is not found\n", playerID)
-		w.WriteHeader(http.StatusNotFound)
+		e := fmt.Errorf("Player with playerID %d is not found\n", playerID)
+		http.Error(w, e.Error(), http.StatusNotFound)
+		*response.ErrorMessage = e.Error()
 		return
 	}
 
 	// Not the current player's turn
 	if game.NextPlayerIdx != -1 && game.NextPlayerIdx != playerID {
-		fmt.Printf("Is is not player %d's turn\n", playerID)
-		w.WriteHeader(http.StatusConflict)
+		e := fmt.Errorf("Is is not player %d's turn\n", playerID)
+		http.Error(w, e.Error(), http.StatusNotFound)
+		*response.ErrorMessage = e.Error()
 		return
 	}
 
-	response := map[string]string{}
+	errStr := v.ValidateStruct(moveRequest)
+	if errStr != nil {
+		http.Error(w, *errStr, http.StatusBadRequest)
+		response.ErrorMessage = errStr
+		return
+	}
+
 	moveNumber, err := playMove(moveRequest.Row, moveRequest.Column, playerID, &game)
 	if err != nil {
-		fmt.Printf("Failed to play the move, it is illegal. %s\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		e := fmt.Errorf("Failed to play the move, it is illegal. %s\n", err.Error())
+		http.Error(w, e.Error(), http.StatusBadRequest)
+		*response.ErrorMessage = e.Error()
 		return
 	}
 
-	response["move"] = fmt.Sprintf("%s/moves/%d", gameID, moveNumber)
+	response.Data = map[string]interface{}{
+		"move": fmt.Sprintf("%s/moves/%d", gameID, moveNumber),
+	}
 
 	// Store next player
 	if game.NextPlayerIdx == 0 {
@@ -284,18 +320,19 @@ func PostAMove(w http.ResponseWriter, r *http.Request) {
 	if checkBoardForWinner(moveRequest.Row, moveRequest.Column, playerID, &game) {
 		fmt.Printf("Winner! player: %s\n", game.Players[playerID])
 		game.State = database.StateComplete
-		response["winner"] = game.Players[playerID]
+		response.Data["winner"] = game.Players[playerID]
 	}
 
 	// Update the move in the DB
 	err = dbClient.UpdateGame(game)
 	if err != nil {
-		fmt.Printf("Failed to update the game in the DB. Err: %s", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		e := fmt.Errorf("Failed to update the game in the DB. %s\n", err.Error())
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+		*response.ErrorMessage = e.Error()
 		return
 	}
 
-	json.NewEncoder(w).Encode(&response)
+	response.ErrorMessage = nil
 	w.WriteHeader(http.StatusOK)
 }
 

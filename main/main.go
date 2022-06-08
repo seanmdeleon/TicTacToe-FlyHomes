@@ -9,12 +9,12 @@ import (
 	"os/signal"
 	"strconv"
 
+	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/apiresources"
 	"github.com/rs/cors"
-	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/apiresources"
 )
 
 // This is the entry point for the HTTP server
-// Locally, this program will run using localhost and can be stopped by performing a Ctrl+C
+// Locally, this program will run using localhost:8080 and can be stopped by performing a Ctrl+C
 // In a more sophisticated design that scales, I would serve this in a Lambda function that gets invoked via APIGateway
 func main() {
 

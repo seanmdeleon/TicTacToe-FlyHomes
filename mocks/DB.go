@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	database "github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/database"
+	database "github.com/TicTacToe-Backend/SeanDeLeon/pkg/database"
 	mock "github.com/stretchr/testify/mock"
 )
 

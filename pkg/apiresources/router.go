@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/TicTacToe-Backend/SeanDeLeon/pkg/database"
 	"github.com/gorilla/mux"
-	"github.com/seanmdeleon/TicTacToe-FlyHomes/pkg/database"
 )
 
 var dbClient *database.Client

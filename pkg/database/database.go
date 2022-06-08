@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"time"
 )
 
 /*
@@ -47,7 +46,7 @@ type DB interface {
 // Client is the client the implements the DB interface. The holds access to the InMemory ticTacToeDBTable
 type Client struct {
 
-	// a channel for locking the ticTacToeDBTable to simulate atomic writes
+	// a channel for locking the ticTacToeDBTable to simulate atomic read and writes
 	channelLock chan bool
 }
 
@@ -111,7 +110,6 @@ func (c *Client) GetAllGames() ([]Game, error) {
 
 	<-c.channelLock
 	defer func() { c.channelLock <- true }()
-	time.Sleep(time.Second * 10)
 
 	for _, game := range ticTacToeDbTable {
 		result = append(result, game)

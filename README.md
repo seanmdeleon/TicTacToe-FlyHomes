@@ -18,57 +18,75 @@ TicTacToe coding challenge for FlyHomes interview
     GET tictactoe/
         Return all games InProgress
     
-        curl -v http://localhost:8080/tictactoe
+        curl -v 'http://localhost:8080/tictactoe'
 
         Example Response
-		    {"games": ["5fb190f-20d7-4a3f-beef-6191342ae06a", "e8d50f36-25fb-49ff-85d2-aa516cf6327b"] }
+        	{
+                "error": null,
+                "data": {"games": ["5fb190f-20d7-4a3f-beef-6191342ae06a", "e8d50f36-25fb-49ff-85d2-aa516cf6327b"] }
+		    }
 
     POST tictactoe/
         Create a new game
 
-        curl -v --header "Content-Type: application/json" -d "{\"players\":[\"player1\", \"player2\"], \"columns\": 3, \"rows\": 3}" http://localhost:8080/tictactoe
+        curl -v --header "Content-Type: application/json" -d "{\"players\":[\"player1\", \"player2\"], \"columns\": 3, \"rows\": 3}" 'http://localhost:8080/tictactoe'
 
         Example Response
-            {"gameId":"e8d50f36-25fb-49ff-85d2-aa516cf6327b"}
+            {
+                "error": null,
+                "data": {"gameId": "5fb190f-20d7-4a3f-beef-6191342ae06a"}
+		    }
     
     GET tictactoe/{game_id}
         Get a game with game_id
 
-        curl -v http://localhost:8080/tictactoe/c2b9352d-ded2-4177-a38a-d54df68d32d3
+        curl -v 'http://localhost:8080/tictactoe/c2b9352d-ded2-4177-a38a-d54df68d32d3'
 
         Example Response
-            {"players":["player1","player2"],"state":"IN_PROGRESS"}
+            {
+                "errorMessage":null, 
+                "data":{"players":["player1","player2"],"state":"IN_PROGRESS"}
+            }
     
     GET tictactoe/{game_id}/moves
         Get a list or sublist of moves for a give game_id
         start and until are optional
 
-        curl -v http://localhost:8080/tictactoe/e5fb190f-20d7-4a3f-beef-6191342ae06a/moves?start=0&until=1
+        curl -v 'http://localhost:8080/tictactoe/e5fb190f-20d7-4a3f-beef-6191342ae06a/moves?start=0&until=1'
     
     GET tictactoe/{game_id}/moves/{move_number}
         Get a move for a game_id with a move_number, move_number is 0 offset
 
-        curl -v http://localhost:8080/tictactoe/e5fb190f-20d7-4a3f-beef-6191342ae06a/moves/2
+        curl -v 'http://localhost:8080/tictactoe/e5fb190f-20d7-4a3f-beef-6191342ae06a/moves/2'
 
         Example Response
-            {"type":"MOVE","player":"player2","row":0,"col":1}
+            {
+                "errorMessage":null, 
+                "data":{"type":"MOVE","player":"player2","row":0,"col":1}
+            }
     
     POST tictactoe/{game_id}/{player_id}
         Post a Move
         playerID is either 0 or 1, unique per game_id
 
-        curl -v --header "Content-Type: application/json" -d "{\"row\": 1, \"column\": 1}" http://localhost:8080/tictactoe/e5fb190f-20d7-4a3f-beef-6191342ae06a/0
+        curl -v --header "Content-Type: application/json" -d "{\"row\": 1, \"column\": 1}" 'http://localhost:8080/tictactoe/fc577544-2fc3-4c3b-87ea-e67fe7a9226a/0'
 
         Example Response
-            {"move":"c2b9352d-ded2-4177-a38a-d54df68d32d3/moves/4"}
+            {
+                "errorMessage":null, 
+                "data": {"move":"c2b9352d-ded2-4177-a38a-d54df68d32d3/moves/4"}
+            }
     
     PUT tictactoe/{game_id}/quit
         Quit a game provided the game_id
 
-        curl -v -X PUT http://localhost:8080/tictactoe/c2b9352d-ded2-4177-a38a-d54df68d32d3/quit
+        curl -v -X PUT 'http://localhost:8080/tictactoe/c2b9352d-ded2-4177-a38a-d54df68d32d3/quit'
 
         Example Response
-            {"quitGame":"e8d50f36-25fb-49ff-85d2-aa516cf6327b"}
+            {
+                "errorMessage":null, 
+                "data": {"quitGame":"e8d50f36-25fb-49ff-85d2-aa516cf6327b"}
+            }
 
 --> Design Thoughts by Sean <--
 
